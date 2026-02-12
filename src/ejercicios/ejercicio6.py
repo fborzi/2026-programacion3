@@ -6,5 +6,6 @@ cantidad_impares = 0
 while 10 <= suma_digitos(numero) <= 50:
     if not es_par(numero):
         cantidad_impares += 1
+    numero = int(input("Ingrese un número entero: "))
 
 print("La cantidad de números impares ingresados es:", cantidad_impares)

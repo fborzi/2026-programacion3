@@ -8,8 +8,8 @@ from unittest.mock import patch
 from test.utils.constant import REGEX_FOR_LETTERS, REGEX_FOR_INT_ONLY
 
 
-class TestExercise6(unittest.TestCase):
-    MODULE_NAME = "src.ejercicios.ejercicio6"
+class TestExercise7(unittest.TestCase):
+    MODULE_NAME = "src.ejercicios.ejercicio7"
 
     def run_exercise(self, *inputs: int) -> list[str]:
         """Runs the exercise with the given inputs and captures the output."""
@@ -26,36 +26,27 @@ class TestExercise6(unittest.TestCase):
     def validateRegex(self, line: str) -> None:
         self.assertRegex(line, REGEX_FOR_LETTERS, "The print must contain a sentence explaining the result.")
 
-    def test_numbers_greater_than_50(self):
-        lines = self.run_exercise(87, 2345, 88, 15)
+    def test_maximum(self):
+        lines = self.run_exercise(87, 45, 98, 115, 12)
         print(lines)
-        odd = lines[0].lower().__contains__("2")
+        maximum = lines[0].lower().__contains__("115")
         m = re.search(REGEX_FOR_INT_ONLY, lines[0])
         self.assertIsNotNone(m)
-        self.assertTrue(odd)
+        self.assertTrue(maximum)
         self.validateRegex(lines[0])
 
-    def test_numbers_lower_than_10(self):
-        lines = self.run_exercise(87, 2345, 12345, 15, 88)
+    def test_maximum_negatives(self):
+        lines = self.run_exercise(-87, -45, -98, -11, -12)
         print(lines)
-        odd = lines[0].lower().__contains__("3")
+        maximum = lines[0].lower().__contains__("98")
         m = re.search(REGEX_FOR_INT_ONLY, lines[0])
         self.assertIsNotNone(m)
-        self.assertTrue(odd)
-        self.validateRegex(lines[0])
-
-    def test_no_odd(self):
-        lines = self.run_exercise(-444, -2246, -4000)
-        print(lines)
-        odd = lines[0].lower().__contains__("0")
-        m = re.search(REGEX_FOR_INT_ONLY, lines[0])
-        self.assertIsNotNone(m)
-        self.assertTrue(odd)
+        self.assertTrue(maximum)
         self.validateRegex(lines[0])
 
     def test_missing_input(self):
         with self.assertRaises(StopIteration):
-            self.run_exercise(551, 155, 255, 355, 455)
+            self.run_exercise(551, 155, 255)
 
 if __name__ == '__main__':
     unittest.main()

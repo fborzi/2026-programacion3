@@ -45,6 +45,20 @@ def maximo(num1: int, num2: int) -> int:
     """
     return abs(num1) if abs(num1) > abs(num2) else abs(num2)
 
+def quitar_tildes(cadena: str) -> str:
+    """Elimina las tildes de una cadena de texto.
+
+    Args:
+        cadena (str): La cadena de texto a procesar.
+
+    Returns:
+        str: La cadena de texto sin tildes.
+    """
+    tildes = "áéíóúÁÉÍÓÚ"
+    sin_tildes = "aeiouAEIOU"
+    trans = cadena.maketrans(tildes, sin_tildes)
+    return cadena.translate(trans)
+
 def usuario(nombre: str) -> str:
     """Formatear el nombre de usuario
 
@@ -60,7 +74,7 @@ def usuario(nombre: str) -> str:
     for u in usuarios:
         usuario_formateado += u
 
-    return usuario_formateado
+    return quitar_tildes(usuario_formateado)
 
 def contrasenia_por_defecto(dni: int) -> str:
     """Genera una contraseña por defecto a partir del DNI.
@@ -71,7 +85,7 @@ def contrasenia_por_defecto(dni: int) -> str:
     Returns:
         str: La contraseña generada a partir del DNI.
     """
-    return str(dni[-4:])
+    return str(dni)[-4:]
 
 def titulo(cadena: str) -> str:
     """Devuelve un texto convertido a title().
