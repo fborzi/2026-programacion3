@@ -1,0 +1,6 @@
+REGEX_FOR_FLOAT_INT = r"(?<=:)\s*([+-]?\d+(?:\.\d+)?)"
+REGEX_FOR_INT_ONLY = r"(?<=:)\s*([+-]?\d+)\b"
+REGEX_FOR_INT_WITHOUT_COLON = r"(\d+)"
+REGEX_FOR_STRING_WITHOUT_COLON = r"\s*(.+)$"
+REGEX_FOR_STRING = r"(?<=:)\s*(.+)$"
+REGEX_FOR_LETTERS = r"[A-Za-z]"

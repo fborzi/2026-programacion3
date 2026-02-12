@@ -1,0 +1,42 @@
+[MAIN]
+# Activamos el checker de documentación de parámetros
+load-plugins = pylint.extensions.docparams, pylint.extensions.typing
+
+# No aceptar funciones sin documentación de parámetros / retorno
+accept-no-param-doc = no
+accept-no-return-doc = yes
+# Estos dos los dejamos tolerantes, si querés después los ponemos en "no"
+accept-no-raise-doc = yes
+accept-no-yields-doc = yes
+
+[MESSAGES CONTROL]
+# NO deshabilitamos missing-*docstring -> obligatorios
+disable =
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-statements
+
+[FORMAT]
+max-line-length = 120
+indent-string = '    '
+
+[BASIC]
+# Todo debe tener docstring (módulos, clases, funciones)
+# (este regex dice “no hay ninguna excepción”)
+no-docstring-rgx = ^$
+
+[DESIGN]
+max-args = 10
+max-branches = 12
+max-locals = 25
+max-returns = 6
+max-statements = 50
+
+[SIMILARITIES]
+min-similarity-lines = 10
+ignore-comments = yes
+ignore-docstrings = yes
+ignore-imports = yes

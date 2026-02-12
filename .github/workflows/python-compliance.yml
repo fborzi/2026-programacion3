@@ -1,0 +1,198 @@
+name: Python Code Compliance
+
+on:
+  push:
+    branches: [main, master, feature/*]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  python-compliance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint pytest ruff flake8 flake8-enforce-type-annotations
+          
+      - name: Run tests
+        id: tests
+        env:
+          PYTHONPATH: src:test
+        run: |
+          pytest -v test/ --junitxml=pytest-report.xml
+
+      - name: Run checks
+        id: lint
+        if: always()
+        run: |
+          set +e
+          
+          
+          ruff check src/ --output-format=pylint > ruff-report.txt
+          RUFF_EXIT=$?
+          
+          flake8 src/ > flake8-report.txt
+          FLAKE8_EXIT=$?
+          
+          pylint src/ --output-format=parseable --score=n --reports=n > pylint-report.txt
+          PYLINT_EXIT=$?
+          
+          if [ $RUFF_EXIT -ne 0 ] || [ $FLAKE8_EXIT -ne 0 ] || [ $PYLINT_EXIT -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Publish report to Summary
+        if: always()
+        run: |
+          SUMMARY="$GITHUB_STEP_SUMMARY"
+          
+          echo "# 🐍 Python Code Compliance" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$SUMMARY"
+          echo "- Autor: \`${{ github.actor }}\`" >> "$SUMMARY"
+          echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+
+          #### TESTS ####
+          
+          echo "## Tests (pytest)" >> "$SUMMARY"
+          echo "### Ejecutá **pytest -v test** para correr los tests localmente." >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "- Estado del step: **${{ steps.tests.outcome }}**" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+                               
+          if [ ! -f pytest-report.xml ]; then
+            echo "_No se encontró pytest-report.xml_" >> "$SUMMARY"
+          else
+          python <<'PY' >> "$SUMMARY"
+          import xml.etree.ElementTree as ET
+          
+          root = ET.parse("pytest-report.xml").getroot()
+          
+          for tc in root.findall(".//testcase"):
+            name = tc.attrib.get("name", "(sin nombre)")
+            cls = tc.attrib.get("classname", "")
+            label = f"{cls}::{name}" if cls else name
+            
+            failure = tc.find("failure")
+            error = tc.find("error")
+            
+            if failure is not None or error is not None:
+              node = failure if failure is not None else error
+              msg = node.attrib.get("message", "").strip()
+              detail = (node.text or "").strip()
+              
+              print(f"- **{label}** ❌")
+              if msg:
+                print(f"  - Motivo: {msg}")
+                if detail:
+                  print("  - Detalle:")
+                  print("```")
+                  print(detail[:2000])
+                  print("```")
+            else:
+              print(f"- {label} ✅")
+          PY
+          fi
+  
+          #### PYLINT ####
+          
+          echo "" >> "$SUMMARY"
+          echo "## Pylint" >> "$SUMMARY"
+          echo "### Ejecutá **pylint /src** para correr las comprobaciones localmente." >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "- Estado del step: **${{ steps.pylint.outcome || 'success' }}**" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          
+          if [ ! -f pylint-report.txt ]; then
+            echo "_No se generó pylint-report.txt (pylint no se ejecutó)._ ❌" >> "$SUMMARY"
+          elif [ ! -s pylint-report.txt ]; then
+            echo "Sin observaciones. ✅ " >> "$SUMMARY"
+          else
+            grep -E '^[^:]+:[0-9]+:' pylint-report.txt | head -n 200 | while IFS= read -r line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NO=$(echo "$line" | cut -d: -f2)
+              COL_NO=$(echo "$line" | cut -d: -f3)
+              REST=$(echo "$line" | cut -d: -f4-)
+               
+              CODE=$(echo "$REST" | sed -n 's/^[[:space:]]*\([A-Z][0-9]\{4\}\).*/\1/p')
+              MSG=$(echo "$REST" | sed -n 's/^[[:space:]]*[A-Z][0-9]\{4\}:[[:space:]]*\(.*\)$/\1/p')
+              
+              [ -z "$CODE" ] && CODE="pylint"
+              [ -z "$MSG" ] && MSG="$REST"
+              
+              echo "- \`$FILE:$LINE_NO:$COL_NO\` **$CODE** ❌" >> "$SUMMARY"
+              echo "  - $MSG" >> "$SUMMARY"
+            done
+          fi
+
+          #### RUFF ####
+          
+          echo "" >> "$SUMMARY"
+          echo "## Ruff" >> "$SUMMARY"
+          echo "### Ejecutá **ruff check /src** para correr las comprobaciones localmente." >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+
+          if [ ! -f ruff-report.txt ]; then
+            echo "_No se generó ruff-report.txt (ruff no se ejecutó)._ ❌" >> "$SUMMARY"
+          elif [ ! -s ruff-report.txt ]; then
+            echo "Sin observaciones. ✅ " >> "$SUMMARY"
+          else
+            head -n 200 ruff-report.txt | while IFS= read -r line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NO=$(echo "$line" | cut -d: -f2)
+              COL_NO=$(echo "$line" | cut -d: -f3)
+              REST=$(echo "$line" | cut -d: -f4-)
+
+              CODE=$(echo "$REST" | awk '{print $1}')
+              MSG=$(echo "$REST" | sed -E 's/^[[:space:]]*[A-Z0-9]+[[:space:]]+//')
+          
+              echo "- \`$FILE:$LINE_NO:$COL_NO\` **$CODE** ❌" >> "$SUMMARY"
+              echo "  - $MSG" >> "$SUMMARY"
+            done
+          fi
+
+          #### FLAKE8 ####
+               
+          echo "" >> "$SUMMARY"
+          echo "## Flake8" >> "$SUMMARY"
+          echo "### Ejecutá **flake8 /src** para correr las comprobaciones localmente." >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          
+          if [ ! -f flake8-report.txt ]; then
+            echo "_No se generó flake8-report.txt (flake8 no se ejecutó)._ ❌" >> "$SUMMARY"
+          elif [ ! -s flake8-report.txt ]; then
+            echo "Sin observaciones. ✅ " >> "$SUMMARY"
+          else
+            head -n 200 flake8-report.txt | while IFS= read -r line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NO=$(echo "$line" | cut -d: -f2)
+              COL_NO=$(echo "$line" | cut -d: -f3)
+              REST=$(echo "$line" | cut -d: -f4-)
+
+              CODE=$(echo "$REST" | awk '{print $1}')
+              MSG=$(echo "$REST" | sed -E 's/^[[:space:]]*[A-Z0-9]+[[:space:]]+//')
+             
+              echo "- \`$FILE:$LINE_NO:$COL_NO\` **$CODE** ❌" >> "$SUMMARY"
+              echo "  - $MSG" >> "$SUMMARY"
+            done
+          fi
+
+      # (Opcional) si querés que falle el job si pylint encontró issues:
+      - name: Fail if pylint has issues
+        if: always()
+        run: |
+          if [ -s pylint-report.txt ]; then
+            echo "Pylint encontró issues. Fallando el job."
+            exit 1
+          fi

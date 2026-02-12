@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["ANN"]
+ignore = [
+    "ANN101", # Para self
+    "ANN102", # Para cls
+]
